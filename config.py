@@ -1,4 +1,9 @@
 import os
+from dataclasses import dataclass
+
+@dataclass
+class Config:
+    BOT_TOKEN: str
 
 # Токен бота из переменных окружения Railway
 BOT_TOKEN = os.getenv("BOT_TOKEN")
