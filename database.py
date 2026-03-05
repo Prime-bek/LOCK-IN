@@ -36,7 +36,7 @@ class Database:
                 )
             ''')
             
-            # Задачи (шаблоны)
+            # Задачи
             await db.execute('''
                 CREATE TABLE IF NOT EXISTS tasks (
                     task_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -44,7 +44,6 @@ class Database:
                     name TEXT,
                     category TEXT,
                     xp INTEGER,
-                    is_daily BOOLEAN DEFAULT 0,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (user_id) REFERENCES users(user_id)
                 )
@@ -58,8 +57,7 @@ class Database:
                     task_id INTEGER,
                     completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     xp_earned INTEGER,
-                    FOREIGN KEY (user_id) REFERENCES users(user_id),
-                    FOREIGN KEY (task_id) REFERENCES tasks(task_id)
+                    FOREIGN KEY (user_id) REFERENCES users(user_id)
                 )
             ''')
             
@@ -71,17 +69,6 @@ class Database:
                     q1 TEXT,
                     q2 TEXT,
                     created_at DATE,
-                    FOREIGN KEY (user_id) REFERENCES users(user_id)
-                )
-            ''')
-            
-            # Достижения
-            await db.execute('''
-                CREATE TABLE IF NOT EXISTS achievements (
-                    achievement_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER,
-                    type TEXT,
-                    unlocked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (user_id) REFERENCES users(user_id)
                 )
             ''')
@@ -106,7 +93,7 @@ class Database:
                 )
                 await db.commit()
                 
-                # Создаем начальные статы
+                # Создаем начальные статы по категориям
                 for cat in CATEGORIES.keys():
                     await db.execute(
                         "INSERT INTO user_stats (user_id, category, xp) VALUES (?, ?, 0)",
@@ -120,6 +107,15 @@ class Database:
                     user = await cursor.fetchone()
             
             return dict(user)
+    
+    async def update_user_language(self, user_id: int, language: str):
+        """Обновить язык пользователя"""
+        async with aiosqlite.connect(self.db_path) as db:
+            await db.execute(
+                "UPDATE users SET language = ? WHERE user_id = ?",
+                (language, user_id)
+            )
+            await db.commit()
     
     async def add_xp(self, user_id: int, xp: int, category: str = None) -> Dict[str, Any]:
         """Добавить XP пользователю"""
@@ -162,12 +158,12 @@ class Database:
                 "total_xp": new_xp
             }
     
-    async def create_task(self, user_id: int, name: str, category: str, xp: int, is_daily: bool = False) -> int:
+    async def create_task(self, user_id: int, name: str, category: str, xp: int) -> int:
         """Создать задачу"""
         async with aiosqlite.connect(self.db_path) as db:
             cursor = await db.execute(
-                "INSERT INTO tasks (user_id, name, category, xp, is_daily) VALUES (?, ?, ?, ?, ?)",
-                (user_id, name, category, xp, is_daily)
+                "INSERT INTO tasks (user_id, name, category, xp) VALUES (?, ?, ?, ?)",
+                (user_id, name, category, xp)
             )
             await db.commit()
             return cursor.lastrowid
@@ -193,7 +189,7 @@ class Database:
             await db.commit()
             return True
     
-    async def complete_task(self, user_id: int, task_id: int) -> Dict:
+    async def complete_task(self, user_id: int, task_id: int) -> Optional[Dict]:
         """Выполнить задачу и начислить XP"""
         async with aiosqlite.connect(self.db_path) as db:
             # Получаем информацию о задаче
@@ -266,7 +262,7 @@ class Database:
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
             async with db.execute(
-                "SELECT username, level, xp FROM users ORDER BY xp DESC LIMIT ?",
+                "SELECT user_id, username, level, xp FROM users ORDER BY xp DESC LIMIT ?",
                 (limit,)
             ) as cursor:
                 return [dict(row) for row in await cursor.fetchall()]
@@ -312,8 +308,6 @@ class Database:
                     elif new_streak == 7:
                         bonus = 50
                         message = "streak_7"
-                    elif new_streak == 30:
-                        message = "streak_30"
                     
                     await db.execute(
                         "UPDATE users SET streak = ?, last_active = ? WHERE user_id = ?",
@@ -338,6 +332,40 @@ class Database:
                 )
                 await db.commit()
                 return {"streak": 1, "bonus": 0, "message": None}
+    
+    # ========== ADMIN МЕТОДЫ ==========
+    
+    async def get_all_users_count(self) -> int:
+        """Общее количество пользователей"""
+        async with aiosqlite.connect(self.db_path) as db:
+            async with db.execute("SELECT COUNT(*) as count FROM users") as cursor:
+                return (await cursor.fetchone())['count']
+    
+    async def get_active_users_count(self, days: int = 7) -> int:
+        """Количество активных пользователей за N дней"""
+        async with aiosqlite.connect(self.db_path) as db:
+            date_limit = (datetime.date.today() - datetime.timedelta(days=days)).isoformat()
+            async with db.execute(
+                "SELECT COUNT(*) as count FROM users WHERE last_active >= ?",
+                (date_limit,)
+            ) as cursor:
+                return (await cursor.fetchone())['count']
+    
+    async def get_users_list(self, active_only: bool = False, limit: int = 50) -> List[Dict]:
+        """Получить список пользователей"""
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            
+            if active_only:
+                date_limit = (datetime.date.today() - datetime.timedelta(days=7)).isoformat()
+                query = "SELECT * FROM users WHERE last_active >= ? ORDER BY last_active DESC LIMIT ?"
+                params = (date_limit, limit)
+            else:
+                query = "SELECT * FROM users ORDER BY created_at DESC LIMIT ?"
+                params = (limit,)
+            
+            async with db.execute(query, params) as cursor:
+                return [dict(row) for row in await cursor.fetchall()]
 
 # Глобальный экземпляр базы данных
 db = Database()

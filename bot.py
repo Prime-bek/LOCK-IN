@@ -1,14 +1,12 @@
 import asyncio
 import logging
 
-from aiogram import Bot, Dispatcher, F
+from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 
 from config import BOT_TOKEN
 from database import db
-
-# Импорт хендлеров
-from handlers import start, tasks, progress, leaderboard, journal, settings
+from handlers import router
 
 logging.basicConfig(level=logging.INFO)
 
@@ -21,16 +19,12 @@ async def main():
     storage = MemoryStorage()
     dp = Dispatcher(storage=storage)
     
-    # Регистрация роутеров
-    dp.include_router(start.router)
-    dp.include_router(tasks.router)
-    dp.include_router(progress.router)
-    dp.include_router(leaderboard.router)
-    dp.include_router(journal.router)
-    dp.include_router(settings.router)
+    # Регистрация роутера
+    dp.include_router(router)
     
     # Удаление вебхука и запуск polling
     await bot.delete_webhook(drop_pending_updates=True)
+    logging.info("Бот запущен!")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":

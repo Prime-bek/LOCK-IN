@@ -1,63 +1,32 @@
 import os
 from dataclasses import dataclass
 
-@dataclass
-class Config:
-    BOT_TOKEN: str
-
-# Токен бота из переменных окружения Railway
+# Токен бота
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-
-# Проверка на случай если забыл установить переменную
 if not BOT_TOKEN:
-    raise ValueError(
-        "❌ BOT_TOKEN не найден!\n"
-        "Установи переменную окружения BOT_TOKEN в Railway:\n"
-        "Variables → New Variable → BOT_TOKEN = твой_токен"
-    )
+    raise ValueError("❌ Установи переменную окружения BOT_TOKEN!")
 
-# Путь к базе данных (Railway предоставляет Volume или можно использовать PostgreSQL)
-# Для SQLite на Railway Volume:
-DB_PATH = os.getenv("DB_PATH", "/data/los_bot.db")
+# Admin ID (твой ID)
+ADMIN_ID = 1265652628
 
-# Для PostgreSQL (если решишь перейти позже):
-# DATABASE_URL = os.getenv("DATABASE_URL")
-
-# Остальной код без изменений...
-
-# Путь к базе данных
-DB_PATH = "los_bot.db"
-
-# Состояния для FSM
-@dataclass
-class States:
-    # Добавление задачи
-    TASK_NAME = "task_name"
-    TASK_CATEGORY = "task_category"
-    TASK_XP = "task_xp"
-    
-    # Дневник
-    JOURNAL_Q1 = "journal_q1"
-    JOURNAL_Q2 = "journal_q2"
-    
-    # Настройки
-    SETTINGS_LANG = "settings_lang"
+# База данных
+DB_PATH = os.getenv("DB_PATH", "bot.db")
 
 # Категории задач
 CATEGORIES = {
-    "knowledge": {"emoji": "🎓", "name_ru": "Знания", "name_uz": "Bilim"},
+    "knowledge": {"emoji": "📚", "name_ru": "Знания", "name_uz": "Bilim"},
     "skill": {"emoji": "🎬", "name_ru": "Навыки", "name_uz": "Ko'nikma"},
     "body": {"emoji": "💪", "name_ru": "Тело", "name_uz": "Jismoniy"},
     "mind": {"emoji": "🧠", "name_ru": "Разум", "name_uz": "Aql"}
 }
 
-# Тексты на разных языках
+# Тексты
 TEXTS = {
     "ru": {
-        "welcome": "👋 Добро пожаловать в Life OS!\n\nПрокачивай себя как в RPG.",
+        "welcome": "👋 Добро пожаловать в Life OS!\n\nПрокачивай себя как в RPG. Выбери язык:",
         "menu": "📋 Главное меню:",
         "add_task": "➕ Добавить задачу",
-        "my_tasks": "📅 Мои задачи",
+        "my_tasks": "📋 Мои задачи",
         "progress": "📊 Мой прогресс",
         "leaderboard": "🏆 Рейтинг",
         "journal": "🧠 Дневник",
@@ -65,29 +34,30 @@ TEXTS = {
         "streak": "🔥 Streak",
         "achievements": "🏅 Достижения",
         "start_day": "🚀 Начать день",
-        "add_completion": "⚡ Добавить выполнение",
         "delete_task": "🗑 Удалить задачу",
         "back": "◀️ Назад",
         "cancel": "❌ Отмена",
-        "level_up": "🎉 LEVEL UP!\nВы достигли уровня {level}!",
+        "level_up": "🎉 LEVEL UP!\nТы достиг уровня {level}!",
         "xp_gained": "✅ +{xp} XP получено!",
-        "enter_task_name": "Введите название задачи:",
-        "select_category": "Выберите категорию:",
-        "enter_xp": "Введите количество XP (число):",
+        "enter_task_name": "Введи название задачи:",
+        "select_category": "Выбери категорию:",
+        "enter_xp": "Введи количество XP (1-100):",
         "task_created": "✅ Задача создана!",
-        "no_tasks": "У вас пока нет задач.",
-        "select_task": "Выберите задачу для выполнения:",
+        "no_tasks": "У тебя пока нет задач.",
+        "select_task": "Выбери задачу для выполнения:",
         "journal_q1": "🌙 Что сегодня улучшило тебя?",
         "journal_q2": "📈 Что завтра сделать лучше?",
         "journal_saved": "✅ Запись сохранена! +5 XP",
         "streak_broken": "😢 Streak сброшен. Не сдавайся!",
         "streak_bonus": "🔥 Бонус за {days} дней подряд: +{xp} XP!",
+        "admin_panel": "🔐 Админ-панель\n\nВсего пользователей: {total}\nАктивных (7 дней): {active}\nНеактивных: {inactive}",
+        "admin_users_list": "📋 Список пользователей ({filter}):\n\n",
     },
     "uz": {
-        "welcome": "👋 Life OS'ga xush kelibsiz!\n\nO'zingizni RPG'da rivojlantiring.",
+        "welcome": "👋 Life OS'ga xush kelibsiz!\n\nO'zingizni RPG'da rivojlantiring. Tilni tanlang:",
         "menu": "📋 Asosiy menyu:",
         "add_task": "➕ Vazifa qo'shish",
-        "my_tasks": "📅 Mening vazifalarim",
+        "my_tasks": "📋 Mening vazifalarim",
         "progress": "📊 Mening rivojlanishim",
         "leaderboard": "🏆 Reyting",
         "journal": "🧠 Kundalik",
@@ -95,7 +65,6 @@ TEXTS = {
         "streak": "🔥 Ketma-ketlik",
         "achievements": "🏅 Yutuqlar",
         "start_day": "🚀 Kunni boshlash",
-        "add_completion": "⚡ Bajarish qo'shish",
         "delete_task": "🗑 Vazifani o'chirish",
         "back": "◀️ Orqaga",
         "cancel": "❌ Bekor qilish",
@@ -103,7 +72,7 @@ TEXTS = {
         "xp_gained": "✅ +{xp} XP olindi!",
         "enter_task_name": "Vazifa nomini kiriting:",
         "select_category": "Kategoriyani tanlang:",
-        "enter_xp": "XP miqdorini kiriting (raqam):",
+        "enter_xp": "XP miqdorini kiriting (1-100):",
         "task_created": "✅ Vazifa yaratildi!",
         "no_tasks": "Sizda hali vazifalar yo'q.",
         "select_task": "Bajarish uchun vazifani tanlang:",
@@ -112,27 +81,10 @@ TEXTS = {
         "journal_saved": "✅ Yozuv saqlandi! +5 XP",
         "streak_broken": "😢 Ketma-ketlik uzildi. Tushkunlikka tushmang!",
         "streak_bonus": "🔥 {days} kun ketma-ketlik bonusi: +{xp} XP!",
+        "admin_panel": "🔐 Admin panel\n\nJami foydalanuvchilar: {total}\nFaol (7 kun): {active}\nFaol emas: {inactive}",
+        "admin_users_list": "📋 Foydalanuvchilar ro'yxati ({filter}):\n\n",
     }
 }
 
 # Уровни
-LEVELS = {
-    1: "Beginner",
-    5: "Focused",
-    10: "Builder",
-    20: "Disciplined",
-    30: "Elite",
-    50: "Master"
-}
-
-# XP за действия
-XP_REWARDS = {
-    "study_hour": 15,
-    "skill_hour": 20,
-    "book_pages": 10,  # за 10 страниц
-    "sport_20min": 15,
-    "journal": 5,
-    "streak_3": 20,
-    "streak_7": 50,
-    "level_up": 0  # специальная обработка
-}
+LEVELS = {1: "Beginner", 5: "Novice", 10: "Adept", 20: "Expert", 30: "Master", 50: "Legend"}
